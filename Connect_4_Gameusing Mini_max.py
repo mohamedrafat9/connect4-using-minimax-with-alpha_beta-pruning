@@ -1,12 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox, font
-import customtkinter as ctk
 import numpy as np
 import random
 import math
 import copy
 import time
-
 
 class Connect4:
     def __init__(self):
@@ -16,7 +14,8 @@ class Connect4:
         self.PLAYER_PIECE, self.AI_PIECE = 1, 2
         self.WINDOW_LENGTH = 4
         self.board = self.create_board()
-        self.turn = self.AI
+        self.turn = self.AI 
+        self.first_player = self.AI  
         self.game_over = False
         self.transposition = {}
         self.time_limit = 0.8
@@ -126,14 +125,11 @@ class Connect4:
                 _, sc = child.minimax(depth-1, alpha, beta, False, start)
                 if sc is None:
                     break
-
                 if sc > value:
                     value, best = sc, col
                 alpha = max(alpha, value)
-
                 if alpha >= beta:
                     break
-
             res = (best, value)
         else:
             value, best = math.inf, valid[0]
@@ -148,10 +144,8 @@ class Connect4:
                 if sc < value:
                     value, best = sc, col
                 beta = min(beta, value)
-
                 if alpha >= beta:
                     break
-
             res = (best, value)
         self.transposition[key] = res
         return res
@@ -159,18 +153,14 @@ class Connect4:
     def player_move(self, col):
         if not self.is_valid_location(col):
             return False
-
         r = self.get_next_open_row(col)
         self.drop_piece(r, col, self.PLAYER_PIECE)
-
         if self.winning_move(self.PLAYER_PIECE):
             self.game_over = True
             return "player_win"
-
         if not self.get_valid_locations():
             self.game_over = True
             return "draw"
-
         self.turn = self.AI
         return "continue"
 
@@ -183,15 +173,14 @@ class Connect4:
                 if temp.winning_move(piece):
                     move = col
                     break
-
-            else: continue
+            else:
+                continue
             break
         else:
             move, _ = self.minimax(6, -math.inf, math.inf, True, time.time())
         if move is not None and self.is_valid_location(move):
             r = self.get_next_open_row(move)
             self.drop_piece(r, move, self.AI_PIECE)
-
             if self.winning_move(self.AI_PIECE):
                 self.game_over = True
                 return "bot_win"
@@ -205,9 +194,8 @@ class Connect4:
     def reset_game(self):
         self.board = self.create_board()
         self.game_over = False
-        self.turn = self.AI
-
-
+        self.turn = self.first_player  
+        self.transposition.clear()
 
 class Connect4GUI:
     def __init__(self, master):
@@ -216,13 +204,13 @@ class Connect4GUI:
         self.master.geometry("800x700")
         self.master.resizable(False, False)
         self.master.configure(bg="#1E1E1E")
-
         self.game = Connect4()
         self.circle_size = 80
         self.padding = 20
         self.colors = {0: "black", 1: "#e74856", 2: "#fbcb41"}
         self.main_frame = tk.Frame(self.master, bg="black")
         self.game_frame = tk.Frame(self.master, bg="#1E1E1E")
+        self.first_player_var = tk.StringVar(value="AI")  # Default AI starts
         self.main_menu()
 
     def main_menu(self):
@@ -230,18 +218,30 @@ class Connect4GUI:
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         title_font = font.Font(family="Helvetica", size=32, weight="bold")
         title = tk.Label(self.main_frame, text="Welcome to our Connect 4 Game", fg="#ffffff", bg="black", font=title_font)
-        title.pack(pady=(100, 50))
+        title.pack(pady=(100, 20))
+
+        # First player selection
+        select_frame = tk.Frame(self.main_frame, bg="black")
+        select_frame.pack(pady=20)
+        select_label = tk.Label(select_frame, text="Who plays first?", fg="#ffffff", bg="black", font=("Helvetica", 16))
+        select_label.pack()
+        tk.Radiobutton(select_frame, text="Player (Red)", variable=self.first_player_var, value="Player",
+                       fg="#ffffff", bg="black", selectcolor="black", font=("Helvetica", 14)).pack(side=tk.LEFT, padx=10)
+        tk.Radiobutton(select_frame, text="AI (Yellow)", variable=self.first_player_var, value="AI",
+                       fg="#ffffff", bg="black", selectcolor="black", font=("Helvetica", 14)).pack(side=tk.LEFT, padx=10)
+
         btn_font = font.Font(family="Helvetica", size=16)
         play_btn = tk.Button(self.main_frame, text="Player vs AI", command=lambda: self.start_game("ai"),
                              fg="#ffffff", bg="#007ACC", activebackground="#3399FF", font=btn_font,
                              width=20, height=2, bd=5)
-        play_btn.pack(pady=50)
+        play_btn.pack(pady=20)
         exit_btn = tk.Button(self.main_frame, text="Exit", command=self.master.quit,
                              fg="#ffffff", bg="#E81123", activebackground="#FF3F3F", font=btn_font,
                              width=10, height=1, bd=2)
-        exit_btn.pack(pady=(50,100))
+        exit_btn.pack(pady=(20, 50))
 
     def start_game(self, mode):
+        self.game.first_player = self.game.PLAYER if self.first_player_var.get() == "Player" else self.game.AI
         self.game.reset_game()
         self.game.player_mode = mode
         self.clear_frame()
@@ -270,8 +270,8 @@ class Connect4GUI:
                               width=12, bd=0)
         reset_btn.pack(side=tk.LEFT, padx=5)
         exit_btn = tk.Button(frame, text="Exit", command=self.master.quit,
-                              fg="#ffffff", bg="#E81123", activebackground="#FF3F3F", font=btn_font,
-                              width=12, bd=0)
+                             fg="#ffffff", bg="#E81123", activebackground="#FF3F3F", font=btn_font,
+                             width=12, bd=0)
         exit_btn.pack(side=tk.LEFT, padx=5)
 
     def draw_board(self):
@@ -282,10 +282,11 @@ class Connect4GUI:
                 y1 = (self.game.ROW_COUNT - r - 1) * (self.circle_size + self.padding) + self.padding
                 x2, y2 = x1 + self.circle_size, y1 + self.circle_size
                 self.canvas.create_oval(x1, y1, x2, y2,
-                                         fill=self.colors[self.game.board[r][c]], outline="#C5C5C5", width=2)
+                                        fill=self.colors[self.game.board[r][c]], outline="#C5C5C5", width=2)
 
     def handle_click(self, event):
-        if self.game.game_over or (self.game.player_mode == "ai" and self.game.turn == self.game.AI): return
+        if self.game.game_over or (self.game.player_mode == "ai" and self.game.turn == self.game.AI):
+            return
         col = event.x // (self.circle_size + self.padding)
         if 0 <= col < self.game.COLUMN_COUNT:
             result = self.game.player_move(col)
@@ -311,13 +312,15 @@ class Connect4GUI:
             messagebox.showinfo("Game Over", "It's a draw!")
 
     def reset_game(self):
+        self.game.first_player = self.game.PLAYER if self.first_player_var.get() == "Player" else self.game.AI
         self.game.reset_game()
         self.draw_board()
         if self.game.player_mode == "ai" and self.game.turn == self.game.AI:
             self.master.after(200, self.ai_move)
 
     def clear_frame(self):
-        for f in (self.main_frame, self.game_frame): f.pack_forget()
+        for f in (self.main_frame, self.game_frame):
+            f.pack_forget()
 
 if __name__ == "__main__":
     root = tk.Tk()
